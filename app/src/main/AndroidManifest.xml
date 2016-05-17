@@ -31,6 +31,27 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="ikbal_jimmy.shareservices.MainActivity" />
         </activity>
+        <activity android:name=".RegisterActivity" />
+        <!--
+             ATTENTION: This was auto-generated to add Google Play services to your project for
+             App Indexing.  See https://g.co/AppIndexing/AndroidStudio for more information.
+        -->
+        <meta-data
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version" />
+        <activity
+            android:name=".AddSerciceActivity"
+            android:label="@string/title_activity_add_sercice"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name=".noidentifiActivity"
+            android:label="@string/title_activity_noidentifi"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity android:name=".ServiceCategoryActivity"></activity>
+
+        <activity android:name=".ConversationsActivity" android:icon="@drawable/app_icons_13"
+            android:label="Conversations"  />
+        <activity android:name=".MessagesActivity"></activity>
     </application>
 
 </manifest>

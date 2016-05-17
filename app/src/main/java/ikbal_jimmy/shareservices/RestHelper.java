@@ -1,9 +1,9 @@
 package ikbal_jimmy.shareservices;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+import android.util.Log;
 
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -11,6 +11,11 @@ import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.net.ssl.HttpsURLConnection;
 
 /**
  * Created by jimmymunoz on 17/04/16.
@@ -32,12 +37,16 @@ public class RestHelper {
     {
         String result = "";
         InputStream is = null;
-        int len = 500;
+        int len = 999999;
 
         // HTTP Get
         try {
             URL url = new URL(urlString);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            String api_key = Authenticate.getApiKey();
+            if(api_key != null){
+                conn.setRequestProperty ("Authorization", api_key);//AUTHORIZATION HEADER
+            }
             conn.setReadTimeout(60000 /* milliseconds */);
             conn.setConnectTimeout(60000); //60 secs
             conn.setRequestMethod("GET");
@@ -46,13 +55,41 @@ public class RestHelper {
             conn.connect();
             int response = conn.getResponseCode();
             //Log.d(DEBUG_TAG, "The response is: " + response);
-            is = conn.getInputStream();
+            InputStream _is;
 
-            // Convert the InputStream into a string
-            String contentAsString = readIt(is, len);
-            result = contentAsString;
+            int responseCode=conn.getResponseCode();
+            Log.d("GET ", " Response: " + responseCode);
+
+            if (responseCode / 100 >= 2 && responseCode / 100 < 3 ) { // 2xx code means success
+                _is = conn.getInputStream();
+                //result = getStringFromInputStream(_is);
+
+                // Convert the InputStream into a string
+                String contentAsString = readIt(_is, len);
+                result = contentAsString;
+                result = result.trim();
+                Log.i("Response get ok: ", result);
+            } else {
+                _is = conn.getErrorStream();
+                result = getStringFromInputStream(_is);
+                result = result.trim();
+                Log.i("Response error: ", result);
+                String contentAsString = readIt(_is, len);
+                result = contentAsString;
+            }
+
+            /*
+            if (responseCode == HttpsURLConnection.HTTP_OK) {
+                String line;
+                BufferedReader br=new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                while ((line=br.readLine()) != null) {
+                    result+=line;
+                }
+            }
+            */
+
         } catch (Exception e) {
-
+            Log.d("GET ", " Exception: " + e.getMessage());
             System.out.println(e.getMessage());
             return e.getMessage();
         }
@@ -60,32 +97,66 @@ public class RestHelper {
     }
 
     // REST - PUT
-    public static String executePUT(String urlString)
+    public static String executePUT(String urlString, HashMap<String,String> paramspos)
     {
         String result = "";
         InputStream is = null;
-        int len = 500;
+        int len = 999999;
 
-        // HTTP Get
         try {
+            String urlParameters = getPostDataString(paramspos);
+
             URL url = new URL(urlString);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            String api_key = Authenticate.getApiKey();
+            if(api_key != null){
+                conn.setRequestProperty ("Authorization", api_key);//AUTHORIZATION HEADER
+            }
             conn.setReadTimeout(60000 /* milliseconds */);
             conn.setConnectTimeout(60000); //60 secs
-            conn.setRequestMethod("PUT");
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            conn.setRequestProperty("Content-Length", "" +
+                    Integer.toString(urlParameters.getBytes().length));
+            conn.setRequestProperty("Content-Language", "en-US");
+            conn.setRequestProperty("Accept", "*/*");
             //conn.setDoInput(true);
-            conn.setDoOutput(true);
+            //conn.setDoOutput(true);
             // Starts the query
-            conn.connect();
-            int response = conn.getResponseCode();
-            //Log.d(DEBUG_TAG, "The response is: " + response);
-            is = conn.getInputStream();
+            //Send request
+            DataOutputStream wr = new DataOutputStream(
+                    conn.getOutputStream ());
+            wr.writeBytes(urlParameters);
+            wr.flush();
+            wr.close();
 
-            // Convert the InputStream into a string
-            String contentAsString = readIt(is, len);
-            result = contentAsString;
+            InputStream _is;
+            int responseCode=conn.getResponseCode();
+            Log.d("PUT ", " Response: " + responseCode);
+
+            if (responseCode / 100 >= 2 && responseCode / 100 < 3 ) { // 2xx code means success
+                _is = conn.getInputStream();
+            } else {
+
+                _is = conn.getErrorStream();
+
+                result = getStringFromInputStream(_is);
+                Log.i("Response error: ", result);
+            }
+
+            responseCode=conn.getResponseCode();
+            Log.d("GET ", " Response: " + responseCode);
+
+            if (responseCode / 100 >= 2 && responseCode / 100 < 3 ) {
+                String line;
+                BufferedReader br=new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                while ((line=br.readLine()) != null) {
+                    result+=line;
+                }
+            }
+
         } catch (Exception e) {
-
+            Log.d("PUT ", " Exception: " + e.getMessage());
             System.out.println(e.getMessage());
             return e.getMessage();
         }
@@ -103,19 +174,28 @@ public class RestHelper {
         try {
             URL url = new URL(urlString);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            String api_key = Authenticate.getApiKey();
+            if(api_key != null){
+                conn.setRequestProperty ("Authorization", api_key);//AUTHORIZATION HEADER
+            }
             conn.setReadTimeout(60000 /* milliseconds */);
             conn.setConnectTimeout(60000); //60 secs
             //conn.setDoInput(true);
             conn.setDoOutput(true);
-            conn.setRequestProperty(
-                    "Content-Type", "application/x-www-form-urlencoded");
+            conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
             conn.setRequestMethod("DELETE");
             // Starts the query
             conn.connect();
-            int response = conn.getResponseCode();
-            //Log.d(DEBUG_TAG, "The response is: " + response);
-            is = conn.getInputStream();
+            int responseCode=conn.getResponseCode();
+            if (responseCode / 100 >= 2 && responseCode / 100 < 3 ) { // 2xx code means success
+                is = conn.getInputStream();
+            } else {
 
+                is = conn.getErrorStream();
+
+                result = getStringFromInputStream(is);
+                Log.i("Response error: ", result);
+            }
             // Convert the InputStream into a string
             String contentAsString = readIt(is, len);
             result = contentAsString;
@@ -128,6 +208,128 @@ public class RestHelper {
     }
 
 
+    public static String executePOST(String urlString, HashMap<String,String> paramspos)
+    {
+        String result = "";
+        InputStream is = null;
+        int len = 999999;
 
+        try {
+            String urlParameters = getPostDataString(paramspos);
+
+            URL url = new URL(urlString);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            String api_key = Authenticate.getApiKey();
+            if(api_key != null){
+                conn.setRequestProperty ("Authorization", api_key);//AUTHORIZATION HEADER
+            }
+            conn.setReadTimeout(60000 /* milliseconds */);
+            conn.setConnectTimeout(60000); //60 secs
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            conn.setRequestProperty("Content-Length", "" +
+                    Integer.toString(urlParameters.getBytes().length));
+            conn.setRequestProperty("Content-Language", "en-US");
+            conn.setRequestProperty("Accept","*/*");
+            //conn.setDoInput(true);
+            //conn.setDoOutput(true);
+            // Starts the query
+            //Send request
+            DataOutputStream wr = new DataOutputStream(
+                    conn.getOutputStream ());
+            wr.writeBytes(urlParameters);
+            wr.flush();
+            wr.close();
+
+            /*
+
+            OutputStream os = conn.getOutputStream();
+            BufferedWriter writer = new BufferedWriter(
+                    new OutputStreamWriter(os, "UTF-8"));
+            writer.write(getPostDataString(paramspos));
+            Log.d(" Register", " Post Params: " + getPostDataString(paramspos));
+            writer.flush();
+            writer.close();
+            os.close();
+            */
+
+            InputStream _is;
+            int responseCode=conn.getResponseCode();
+            Log.d("POST ", " Response: " + responseCode);
+            if (responseCode / 100 >= 2 && responseCode / 100 < 3 ) { // 2xx code means success
+                _is = conn.getInputStream();
+            } else {
+                _is = conn.getErrorStream();
+                result = getStringFromInputStream(_is);
+                Log.i("Response error: ", result);
+            }
+
+            if (responseCode == HttpsURLConnection.HTTP_OK) {
+                String line;
+                BufferedReader br=new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                while ((line=br.readLine()) != null) {
+                    result+=line;
+                }
+            }
+
+        } catch (Exception e) {
+            Log.d("POST ", " Exception: " + e.getMessage());
+            System.out.println(e.getMessage());
+            return e.getMessage();
+        }
+        return result;
+    }
+
+
+    private static String getPostDataString(HashMap<String, String> params) throws UnsupportedEncodingException{
+        //StringBuilder result = new StringBuilder();
+        boolean first = true;
+        String urlParameters = "";
+        for(Map.Entry<String, String> entry : params.entrySet()){
+            if (first)
+                first = false;
+            else {
+                //result.append("&");
+                urlParameters += "&";
+            }
+            //result.append(URLEncoder.encode(entry.getKey(), "UTF-8"));
+            //result.append("=");
+            //result.append(URLEncoder.encode(entry.getValue(), "UTF-8"));
+            urlParameters += entry.getKey() + "=" + URLEncoder.encode(entry.getValue(), "UTF-8");
+        }
+
+        //return result.toString();
+        return urlParameters;
+    }
+
+    // convert InputStream to String
+    private static String getStringFromInputStream(InputStream is) {
+
+        BufferedReader br = null;
+        StringBuilder sb = new StringBuilder();
+
+        String line;
+        try {
+
+            br = new BufferedReader(new InputStreamReader(is));
+            while ((line = br.readLine()) != null) {
+                sb.append(line);
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (br != null) {
+                try {
+                    br.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        return sb.toString();
+
+    }
 
 }
